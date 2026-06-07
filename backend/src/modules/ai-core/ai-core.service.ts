@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export class AiCoreService {
   private API_URL = 'https://aetman-wms.hf.space/v1/chat/completions';
-  private MODEL_NAME = 'Qwen2.5-3B-WMS-Master-V3-GGUF';
+  private MODEL_NAME = 'qwen';
 
   constructor() {}
 
