@@ -34,6 +34,55 @@ export class AiCoreService {
     }
   }
 
+  public async buildDynamicContext(): Promise<string> {
+    const contextParts: string[] = [];
+    const now = new Date();
+    const hour = now.getHours();
+
+    // 1. Cảm biến Thời gian & SLA (Shift & SLA Sensor)
+    if (hour >= 16 && hour <= 18) {
+      contextParts.push(`Thời gian: ${hour}:00 - Đang là cuối ca làm, sắp đến giờ chốt xe tải (Cut-off Time). Áp lực xuất/nhập rất cao.`);
+    } else if (hour >= 11 && hour <= 13) {
+      contextParts.push(`Thời gian: ${hour}:00 - Giờ nghỉ trưa. Ưu tiên xử lý nhanh gọn.`);
+    } else {
+      contextParts.push(`Thời gian: ${hour}:00 - Đang trong ca làm việc bình thường.`);
+    }
+
+    // 2. Cảm biến Tải công việc & Nhân sự (Workload Sensor)
+    const pendingTasksCount = await prisma.workTask.count({
+      where: { status: 'TODO' }
+    });
+    // Giả định có 5 xe nâng
+    const availableForklifts = 5; 
+    const workloadRatio = pendingTasksCount / availableForklifts;
+    
+    if (workloadRatio > 5) {
+      contextParts.push(`Workload: Quá tải! Có ${pendingTasksCount} task đang chờ xử lý mà chỉ có ${availableForklifts} xe nâng. Hệ thống đang bị kẹt xe (Congestion).`);
+    } else if (workloadRatio > 2) {
+      contextParts.push(`Workload: Khá đông, có ${pendingTasksCount} task đang chờ.`);
+    } else {
+      contextParts.push(`Workload: Rảnh rỗi, chỉ có ${pendingTasksCount} task đang chờ.`);
+    }
+
+    // 3. Cảm biến Dung lượng Kho (Space Sensor)
+    const totalLocations = await prisma.location.count({ where: { status: 'ACTIVE' } });
+    const fullLocations = await prisma.location.count({ where: { status: 'ACTIVE', is_full: true } });
+    const capacityRatio = totalLocations > 0 ? (fullLocations / totalLocations) * 100 : 0;
+
+    if (capacityRatio > 85) {
+      contextParts.push(`Space: CẢNH BÁO - Kho đã lấp đầy ${capacityRatio.toFixed(1)}%. Bắt buộc phải tìm các khe hẹp để nhét hàng, tối ưu thể tích (Tetris rule).`);
+    } else if (capacityRatio < 30) {
+      contextParts.push(`Space: Rộng rãi, sức chứa mới dùng ${capacityRatio.toFixed(1)}%. Có thể để hàng thoải mái, ưu tiên tiện đường đi.`);
+    }
+
+    // 4. Các Cảm biến nâng cao (Mô phỏng/Mock)
+    // Thực tế sẽ check API dự báo thời tiết hoặc Battery BMS của xe nâng
+    contextParts.push(`Equipment: Pin của các xe nâng còn tốt (>60%).`);
+    contextParts.push(`Environment: Nhiệt độ kho lạnh ổn định (-18°C). Trời quang mây tạnh.`);
+
+    return contextParts.join(' ');
+  }
+
   public async evaluateLayout(x: number, y: number): Promise<string> {
     const prompt = `Bạn là chuyên gia kho bãi. Kệ ở X=${x}, Y=${y}. DOCK ở Y=18,19,20. Đánh giá nhanh có hợp lý không?`;
     return this.askOllama(prompt);

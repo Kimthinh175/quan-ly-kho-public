@@ -24,7 +24,8 @@ export class AiCoreController {
       if (!productId) {
         return res.status(400).json({ error: 'productId is required' });
       }
-      const suggestion = await this.aiCoreService.simulateMCDM(Number(productId), Number(weightKg) || 500, "Hoạt động bình thường.");
+      const dynamicContext = await this.aiCoreService.buildDynamicContext();
+      const suggestion = await this.aiCoreService.simulateMCDM(Number(productId), Number(weightKg) || 500, dynamicContext);
       res.status(200).json(suggestion);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -66,7 +67,9 @@ export class AiCoreController {
       if (!productId || !context) {
         return res.status(400).json({ error: 'productId and context are required' });
       }
-      const result = await this.aiCoreService.simulateMCDM(Number(productId), Number(weightKg) || 500, context);
+      const dynamicContext = await this.aiCoreService.buildDynamicContext();
+      const fullContext = `[Giả lập từ UI: ${context}] | [Thực tế kho: ${dynamicContext}]`;
+      const result = await this.aiCoreService.simulateMCDM(Number(productId), Number(weightKg) || 500, fullContext);
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

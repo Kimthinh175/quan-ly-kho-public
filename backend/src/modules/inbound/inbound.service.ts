@@ -208,7 +208,11 @@ export class InboundService {
     }
 
     const productId = lpn.items[0]?.product_id || 1;
-    const aiDecision = await this.aiCoreService.simulateMCDM(productId, 500, "Hoạt động bình thường."); // 500kg mock
+    
+    // Thu thập Ngữ cảnh Thực tế (Dynamic Context Sensors)
+    const dynamicContext = await this.aiCoreService.buildDynamicContext();
+    
+    const aiDecision = await this.aiCoreService.simulateMCDM(productId, 500, dynamicContext); // 500kg mock
 
     const destLoc = await prisma.location.findUnique({
       where: { location_code: aiDecision.top_locations[0].location_code }
@@ -325,7 +329,11 @@ export class InboundService {
     if (!task) throw new Error('Task not found');
     
     const productId = task.lpn.items[0]?.product_id || 1;
-    const aiDecision = await this.aiCoreService.simulateMCDM(productId, 500, `Vị trí [${failedLocationCode}] đã báo đầy đột xuất hoặc quá tải trọng.`);
+    
+    const dynamicContext = await this.aiCoreService.buildDynamicContext();
+    const fullContext = `Vị trí [${failedLocationCode}] đã báo đầy đột xuất hoặc quá tải trọng. ${dynamicContext}`;
+    
+    const aiDecision = await this.aiCoreService.simulateMCDM(productId, 500, fullContext);
     
     const newDestLoc = await prisma.location.findUnique({
       where: { location_code: aiDecision.top_locations[0].location_code }
