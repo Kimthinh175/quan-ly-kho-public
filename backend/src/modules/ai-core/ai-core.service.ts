@@ -4,32 +4,28 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export class AiCoreService {
-  private OLLAMA_URL = 'http://localhost:11434/api/generate';
-  private MODEL_NAME = 'hf.co/aetman/Qwen2.5-3B-WMS-Master-GGUF';
+  private API_URL = 'https://aetman-wms.hf.space/v1/chat/completions';
+  private MODEL_NAME = 'Qwen2.5-3B-WMS-Master-V3-GGUF';
 
   constructor() {}
 
-  private async askOllama(prompt: string): Promise<string> {
+  private async askAi(prompt: string): Promise<string> {
     try {
-      const response = await axios.post(this.OLLAMA_URL, {
+      const response = await axios.post(this.API_URL, {
         model: this.MODEL_NAME,
-        prompt: prompt,
-        stream: false,
-        format: 'json',
-        keep_alive: '1h', // Giữ model luôn nóng trong VRAM 1 tiếng
-        options: { 
-          temperature: 0,
-          num_ctx: 512,      // Ép context ngắn lại (mặc định 2048/8192) giúp tiết kiệm tính toán
-          num_predict: 250   // Ép số token trả về tối đa, tránh AI suy nghĩ lố
-        }
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0,
+        max_tokens: 250 // Thay thế num_predict của Ollama
       }, {
         headers: {
-          'ngrok-skip-browser-warning': 'true'
+          'Content-Type': 'application/json'
         }
       });
-      return response.data.response;
+      return response.data.choices[0].message.content;
     } catch (error) {
-      console.error('Error calling Ollama:', error);
+      console.error('Error calling AI API (Hugging Face):', error);
       return 'AI is currently offline or unreachable.';
     }
   }
@@ -85,7 +81,7 @@ export class AiCoreService {
 
   public async evaluateLayout(x: number, y: number): Promise<string> {
     const prompt = `Bạn là chuyên gia kho bãi. Kệ ở X=${x}, Y=${y}. DOCK ở Y=18,19,20. Đánh giá nhanh có hợp lý không?`;
-    return this.askOllama(prompt);
+    return this.askAi(prompt);
   }
 
   public async simulateMCDM(productId: number, weightKg: number, context: string) {
@@ -124,7 +120,7 @@ Trả về CHỈ JSON, KHÔNG TEXT DƯ THỪA:
     let aiReason = 'Dựa trên Thuật toán Đa tiêu chí MCDM cơ sở: Cân bằng tải trọng, Tối ưu khoảng cách di chuyển và Đảm bảo an toàn phân khu.';
 
     try {
-      const rawResponse = await this.askOllama(prompt);
+      const rawResponse = await this.askAi(prompt);
       const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         let sanitizedJson = jsonMatch[0].replace(/\/\/.*$/gm, '').replace(/,(?=\s*[}\]])/g, '');
@@ -532,7 +528,7 @@ Yêu cầu Output: CHỈ TRẢ VỀ CHÍNH XÁC MỘT ĐỐI TƯỢNG JSON (Khô
 
     let aiDecision = { algorithm_id: 1, reason: 'Kích hoạt Thuật toán cơ sở: Tối ưu khoảng cách di chuyển để đẩy nhanh tốc độ xuất nhập hàng.' };
     try {
-      const rawResponse = await this.askOllama(prompt);
+      const rawResponse = await this.askAi(prompt);
       const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) aiDecision = JSON.parse(jsonMatch[0]);
     } catch (e) {
