@@ -55,6 +55,7 @@ interface WarehouseMap3DProps {
   locations: LocationItem[];
   showInventory?: boolean;
   focusedLocationCode?: string;
+  focusedLocationCodes?: string[];
 }
 
 // Hàm hỗ trợ để map từ tọa độ thực tế sang tọa độ 3D
@@ -84,7 +85,7 @@ const getProductRank = (name?: string) => {
 };
 
 // Component Rack Vật lý
-const PhysicalRack = ({ group, onSelectSlot, showInventory, focusedLocationCode }: { group: LocationItem[], onSelectSlot: (loc: LocationItem, pos: [number, number, number]) => void, showInventory?: boolean, focusedLocationCode?: string }) => {
+const PhysicalRack = ({ group, onSelectSlot, showInventory, focusedLocationCodes }: { group: LocationItem[], onSelectSlot: (loc: LocationItem, pos: [number, number, number]) => void, showInventory?: boolean, focusedLocationCodes?: string[] }) => {
   if (group.length === 0) return null;
   const baseLoc = group[0]; // Lấy tọa độ X, Y từ phần tử đầu tiên
   const [x, , z] = mapCoordinates(baseLoc.coord_x, baseLoc.coord_y, 0);
@@ -110,19 +111,19 @@ const PhysicalRack = ({ group, onSelectSlot, showInventory, focusedLocationCode 
       {/* 4 Cột trụ (Pillars) */}
       <mesh position={[-0.9, rackHeight/2, -0.4]}>
         <boxGeometry args={[0.1, rackHeight, 0.1]} />
-        <meshStandardMaterial color="#475569" transparent={!!focusedLocationCode} opacity={focusedLocationCode ? 0.2 : 1} />
+        <meshStandardMaterial color="#475569" transparent={!!(focusedLocationCodes && focusedLocationCodes.length > 0)} opacity={(focusedLocationCodes && focusedLocationCodes.length > 0) ? 0.2 : 1} />
       </mesh>
       <mesh position={[0.9, rackHeight/2, -0.4]}>
         <boxGeometry args={[0.1, rackHeight, 0.1]} />
-        <meshStandardMaterial color="#475569" transparent={!!focusedLocationCode} opacity={focusedLocationCode ? 0.2 : 1} />
+        <meshStandardMaterial color="#475569" transparent={!!(focusedLocationCodes && focusedLocationCodes.length > 0)} opacity={(focusedLocationCodes && focusedLocationCodes.length > 0) ? 0.2 : 1} />
       </mesh>
       <mesh position={[-0.9, rackHeight/2, 0.4]}>
         <boxGeometry args={[0.1, rackHeight, 0.1]} />
-        <meshStandardMaterial color="#475569" transparent={!!focusedLocationCode} opacity={focusedLocationCode ? 0.2 : 1} />
+        <meshStandardMaterial color="#475569" transparent={!!(focusedLocationCodes && focusedLocationCodes.length > 0)} opacity={(focusedLocationCodes && focusedLocationCodes.length > 0) ? 0.2 : 1} />
       </mesh>
       <mesh position={[0.9, rackHeight/2, 0.4]}>
         <boxGeometry args={[0.1, rackHeight, 0.1]} />
-        <meshStandardMaterial color="#475569" transparent={!!focusedLocationCode} opacity={focusedLocationCode ? 0.2 : 1} />
+        <meshStandardMaterial color="#475569" transparent={!!(focusedLocationCodes && focusedLocationCodes.length > 0)} opacity={(focusedLocationCodes && focusedLocationCodes.length > 0) ? 0.2 : 1} />
       </mesh>
 
       {/* Các mặt mâm (Shelves) tương ứng với từng tầng (level_z) */}
@@ -140,7 +141,7 @@ const PhysicalRack = ({ group, onSelectSlot, showInventory, focusedLocationCode 
             {/* Mâm kệ chung cho tầng này */}
             <mesh>
               <boxGeometry args={[1.9, 0.05, 0.9]} />
-              <meshStandardMaterial color={color} transparent={!!focusedLocationCode} opacity={focusedLocationCode ? 0.2 : 1} />
+              <meshStandardMaterial color={color} transparent={!!(focusedLocationCodes && focusedLocationCodes.length > 0)} opacity={(focusedLocationCodes && focusedLocationCodes.length > 0) ? 0.2 : 1} />
             </mesh>
             
             {/* Render các Pallet/Khe cắm trên mâm này (tối đa 2 slot A, B) */}
@@ -169,7 +170,7 @@ const PhysicalRack = ({ group, onSelectSlot, showInventory, focusedLocationCode 
                   {/* Hộp hàng giả lập (Pallet) với màu sắc và tên Sản phẩm */}
                   {showInventory && loc.current_weight_kg > 0 && loc.product && (
                     <group position={[0, 0.25, 0]}>
-                      {focusedLocationCode === loc.location_code && (
+                      {focusedLocationCodes?.includes(loc.location_code) && (
                         <>
                           <pointLight color={loc.product.color} intensity={10} distance={8} decay={1.5} />
                           {/* Hào quang sáng bao quanh cell chứa pallet */}
@@ -189,11 +190,11 @@ const PhysicalRack = ({ group, onSelectSlot, showInventory, focusedLocationCode 
                       <mesh>
                         <boxGeometry args={[0.8, 0.4, 0.6]} />
                         <meshStandardMaterial 
-                          color={focusedLocationCode === loc.location_code ? '#ffffff' : (focusedLocationCode ? '#1e293b' : loc.product.color)}
-                          emissive={focusedLocationCode === loc.location_code ? '#ffffff' : '#000000'}
-                          emissiveIntensity={focusedLocationCode === loc.location_code ? 0.8 : 0}
-                          transparent={!!focusedLocationCode && focusedLocationCode !== loc.location_code}
-                          opacity={focusedLocationCode && focusedLocationCode !== loc.location_code ? 0.2 : 1}
+                          color={focusedLocationCodes?.includes(loc.location_code) ? '#ffffff' : ((focusedLocationCodes && focusedLocationCodes.length > 0) ? '#1e293b' : loc.product.color)}
+                          emissive={focusedLocationCodes?.includes(loc.location_code) ? '#ffffff' : '#000000'}
+                          emissiveIntensity={focusedLocationCodes?.includes(loc.location_code) ? 0.8 : 0}
+                          transparent={!!(focusedLocationCodes && focusedLocationCodes.length > 0) && !focusedLocationCodes?.includes(loc.location_code)}
+                          opacity={(focusedLocationCodes && focusedLocationCodes.length > 0) && !focusedLocationCodes?.includes(loc.location_code) ? 0.2 : 1}
                         />
                       </mesh>
                       
@@ -232,18 +233,26 @@ const PhysicalRack = ({ group, onSelectSlot, showInventory, focusedLocationCode 
   );
 };
 
-const WarehouseMap3D: React.FC<WarehouseMap3DProps> = ({ locations, showInventory = true, focusedLocationCode }) => {
+const WarehouseMap3D: React.FC<WarehouseMap3DProps> = ({ locations, showInventory = true, focusedLocationCode, focusedLocationCodes: customFocusedCodes }) => {
   const [selectedLoc, setSelectedLoc] = React.useState<{ loc: LocationItem, pos: [number, number, number] } | null>(null);
 
   const handleSelectSlot = (loc: LocationItem, pos: [number, number, number]) => {
     setSelectedLoc({ loc, pos });
   };
 
+  const focusedLocationCodes = customFocusedCodes || (focusedLocationCode ? [focusedLocationCode] : []);
+
   let focusedPos: [number, number, number] | null = null;
   let pathPoints: [number, number, number][] = [];
 
-  if (focusedLocationCode) {
-    const focusedLoc = locations.find(l => l.location_code === focusedLocationCode);
+  const DOCK_INS = [[-15, 0.05, 9]] as [number, number, number][];
+  const DOCK_OUTS = [[15, 0.05, 9]] as [number, number, number][];
+  
+  const closestDockIn = DOCK_INS[0];
+  const closestDockOut = DOCK_OUTS[0];
+
+  if (focusedLocationCodes.length === 1) {
+    const focusedLoc = locations.find(l => l.location_code === focusedLocationCodes[0]);
     if (focusedLoc) {
       const isSlotA = focusedLoc.location_code.endsWith('-A');
       const offsetX = isSlotA ? -0.45 : 0.45;
@@ -252,62 +261,82 @@ const WarehouseMap3D: React.FC<WarehouseMap3DProps> = ({ locations, showInventor
       focusedPos = [x + offsetX, shelfY + 0.25, z];
 
       // --- Tính toán đường đi ngắn nhất (Shortest Path) ---
-      const DOCK_INS = [[-15, 0.05, 9]] as [number, number, number][];
-      const DOCK_OUTS = [[15, 0.05, 9]] as [number, number, number][];
+      const palletFloorPos = [x + offsetX * 1.5, 0.02, z] as [number, number, number];
       
-      const palletFloorPos = [x + offsetX * 1.5, 0.02, z] as [number, number, number]; // Nhích ra giữa lối đi thêm chút xíu
-      
-      // Tìm DOCK IN gần nhất (Manhattan distance)
-      let closestDockIn = DOCK_INS[0];
-      let minIn = Infinity;
-      DOCK_INS.forEach(dock => {
-        const d = Math.abs(dock[0] - palletFloorPos[0]) + Math.abs(dock[2] - palletFloorPos[2]);
-        if (d < minIn) { minIn = d; closestDockIn = dock; }
-      });
-
-      // Tìm DOCK OUT gần nhất
-      let closestDockOut = DOCK_OUTS[0];
-      let minOut = Infinity;
-      DOCK_OUTS.forEach(dock => {
-        const d = Math.abs(dock[0] - palletFloorPos[0]) + Math.abs(dock[2] - palletFloorPos[2]);
-        if (d < minOut) { minOut = d; closestDockOut = dock; }
-      });
-
-      // Tạo path chữ U/L qua trục Z=9 (Lối đi chính ở gần Dock)
+      // Tạo path chữ U/L qua trục Z=9
       pathPoints = [
         closestDockIn,
-        [palletFloorPos[0], 0.02, closestDockIn[2]], // Rẽ trái/phải đến lối đi của Pallet
-        palletFloorPos, // Đi dọc lối đi vào Pallet
-        [palletFloorPos[0], 0.02, closestDockOut[2]], // Quay ra lại lối đi chính
-        closestDockOut // Đi tới DOCK OUT
+        [palletFloorPos[0], 0.02, closestDockIn[2]],
+        palletFloorPos,
+        [palletFloorPos[0], 0.02, closestDockOut[2]],
+        closestDockOut
       ];
+    }
+  } else if (focusedLocationCodes.length > 1) {
+    // Wave Picking Path cho nhiều Pallet
+    const targets = focusedLocationCodes
+      .map(code => locations.find(l => l.location_code === code))
+      .filter((l): l is LocationItem => !!l)
+      .sort((a, b) => {
+        // Sắp xếp theo X tăng dần (từ Dock In sang Dock Out), sau đó Z
+        if (a.coord_x !== b.coord_x) return a.coord_x - b.coord_x;
+        return a.coord_y - b.coord_y;
+      });
+
+    if (targets.length > 0) {
+      pathPoints.push(closestDockIn);
+      
+      let lastX: number | null = null;
+      
+      targets.forEach(loc => {
+        const isSlotA = loc.location_code.endsWith('-A');
+        const offsetX = isSlotA ? -0.45 : 0.45;
+        const [x, , z] = mapCoordinates(loc.coord_x, loc.coord_y, 0);
+        const palletFloorPos = [x + offsetX * 1.5, 0.02, z] as [number, number, number];
+
+        // Rẽ vào hẻm mới từ hành lang chính
+        if (lastX !== null && lastX !== x) {
+          pathPoints.push([lastX + offsetX * 1.5, 0.02, closestDockIn[2]]);
+        }
+        
+        pathPoints.push([palletFloorPos[0], 0.02, closestDockIn[2]]);
+        pathPoints.push(palletFloorPos);
+        pathPoints.push([palletFloorPos[0], 0.02, closestDockIn[2]]);
+        
+        lastX = x;
+      });
+      
+      pathPoints.push(closestDockOut);
+
+      // Focus camera bao quát ở giữa bản đồ khi gom đơn
+      focusedPos = [0, 15, 15];
     }
   }
 
   return (
-    <div id="warehouse-map-container" style={{ width: '100%', height: '500px', backgroundColor: focusedLocationCode ? '#020617' : '#e2e8f0', borderRadius: '8px', overflow: 'hidden', position: 'relative', transition: 'background-color 0.5s' }}>
+    <div id="warehouse-map-container" style={{ width: '100%', height: '500px', backgroundColor: focusedLocationCodes.length > 0 ? '#020617' : '#e2e8f0', borderRadius: '8px', overflow: 'hidden', position: 'relative', transition: 'background-color 0.5s' }}>
       <Canvas camera={{ position: [0, 15, 25], fov: 60 }} onPointerMissed={() => setSelectedLoc(null)}>
         <CameraController focusedPos={focusedPos} />
         {/* Ánh sáng */}
-        <ambientLight intensity={focusedLocationCode ? 0.05 : 0.5} />
-        <directionalLight position={[10, 20, 10]} intensity={focusedLocationCode ? 0.1 : 1} castShadow />
+        <ambientLight intensity={focusedLocationCodes.length > 0 ? 0.05 : 0.5} />
+        <directionalLight position={[10, 20, 10]} intensity={focusedLocationCodes.length > 0 ? 0.1 : 1} castShadow />
         
         {/* Lưới sàn kho (50x20) */}
         <Grid
           args={[50, 20]} // Kích thước lưới
           cellSize={1} // Mỗi ô là 1m
           cellThickness={1}
-          cellColor={focusedLocationCode ? "#1e293b" : "#94a3b8"}
+          cellColor={focusedLocationCodes.length > 0 ? "#1e293b" : "#94a3b8"}
           sectionSize={5}
           sectionThickness={1.5}
-          sectionColor={focusedLocationCode ? "#0f172a" : "#64748b"}
+          sectionColor={focusedLocationCodes.length > 0 ? "#0f172a" : "#64748b"}
           position={[0, 0, 0]}
         />
         
         {/* Mặt phẳng đỡ (Tùy chọn) */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
           <planeGeometry args={[50, 20]} />
-          <meshStandardMaterial color={focusedLocationCode ? "#020617" : "#f1f5f9"} />
+          <meshStandardMaterial color={focusedLocationCodes.length > 0 ? "#020617" : "#f1f5f9"} />
         </mesh>
 
         {/* Vẽ Đường Chỉ Dẫn Dưới Sàn (Shortest Path) */}
@@ -365,7 +394,7 @@ const WarehouseMap3D: React.FC<WarehouseMap3DProps> = ({ locations, showInventor
 
         {/* Group và render các kệ hàng vật lý */}
         {groupLocations(locations).map((group, index) => (
-          <PhysicalRack key={index} group={group} onSelectSlot={handleSelectSlot} showInventory={showInventory} focusedLocationCode={focusedLocationCode} />
+          <PhysicalRack key={index} group={group} onSelectSlot={handleSelectSlot} showInventory={showInventory} focusedLocationCodes={focusedLocationCodes} />
         ))}
 
         {/* Gắn Popup (Html) vào vị trí của khe kệ được click */}

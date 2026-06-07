@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
-import { Truck, ArrowRight, CheckCircle2, AlertCircle, ShoppingCart, List, Compass } from 'lucide-react';
+import { Truck, ArrowRight, CheckCircle2, AlertCircle, ShoppingCart, List, Compass, Map } from 'lucide-react';
+import WarehouseMap3D from '../master-data/WarehouseMap3D';
 
 interface OutboundLine {
   id: number;
@@ -30,6 +31,10 @@ const OutboundPage: React.FC = () => {
   // Pick State
   const [pickingTasks, setPickingTasks] = useState<any[]>([]);
   const [scannedTask, setScannedTask] = useState<string>('');
+  
+  // Wave Picking Map State
+  const [showWaveMap, setShowWaveMap] = useState<boolean>(false);
+  const [locations, setLocations] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -91,6 +96,23 @@ const OutboundPage: React.FC = () => {
     } catch (err: any) {
       alert('Lỗi: ' + (err.response?.data?.error || err.message));
     }
+  };
+
+  const handleShowWaveMap = async () => {
+    if (locations.length === 0) {
+      setLoading(true);
+      try {
+        const res = await api.get('/master-data/locations');
+        setLocations(res.data);
+      } catch (err) {
+        console.error(err);
+        alert('Lỗi tải dữ liệu kho!');
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
+    }
+    setShowWaveMap(!showWaveMap);
   };
 
   return (
@@ -191,10 +213,29 @@ const OutboundPage: React.FC = () => {
       {activeStep === 2 && (
         <div className="panel-container" style={{ gridTemplateColumns: '1fr' }}>
           <div className="custom-card">
-            <div className="card-header" style={{ backgroundColor: '#ecfdf5', borderBottom: '1px solid #a7f3d0' }}>
-              <Compass size={20} style={{ color: '#059669' }} />
-              <div><h2>Màn Hình Scanner Lấy Hàng (Picking)</h2></div>
+            <div className="card-header" style={{ backgroundColor: '#ecfdf5', borderBottom: '1px solid #a7f3d0', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <Compass size={20} style={{ color: '#059669' }} />
+                <div><h2>Màn Hình Scanner Lấy Hàng (Picking)</h2></div>
+              </div>
+              {pickingTasks.length > 0 && (
+                <button className="btn-primary" onClick={handleShowWaveMap} style={{ background: 'linear-gradient(to right, #0ea5e9, #3b82f6)', border: 'none' }}>
+                  <Map size={16} /> {showWaveMap ? 'Đóng Bản Đồ 3D' : 'Xem Quỹ Đạo Gom Đơn 3D'}
+                </button>
+              )}
             </div>
+            
+            {showWaveMap && pickingTasks.length > 0 && (
+              <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                <h3 style={{ marginBottom: '1rem', color: '#0f172a' }}>🗺️ Quỹ đạo lấy hàng Wave Picking (TSP Route)</h3>
+                <WarehouseMap3D 
+                  locations={locations} 
+                  showInventory={true} 
+                  focusedLocationCodes={pickingTasks.map(t => t.source_location_id)} 
+                />
+              </div>
+            )}
+
             <div className="card-body">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
                 {pickingTasks.map(task => (
