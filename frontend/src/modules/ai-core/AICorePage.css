@@ -1,0 +1,71 @@
+.ai-core-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  font-family: 'Inter', 'Roboto', sans-serif;
+}
+
+.card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+}
+
+.btn-primary {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-primary:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.ai-reason-card {
+  flex: 1;
+  min-width: 300px;
+}
+
+.weights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.weight-bar-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.progress-bg {
+  background: #ecf0f1;
+  height: 12px;
+  border-radius: 6px;
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease-in-out;
+}
+
+.table th, .table td {
+  padding: 12px 15px;
+}

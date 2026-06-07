@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.DS_Store
+*.log
+frontend/dist/
+frontend/node_modules/
+backend/node_modules/
+backend/dist/
+github_deploy_key
+github_deploy_key.pub
+*.gguf
+*.csv

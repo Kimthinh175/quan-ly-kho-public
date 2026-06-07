@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int        @id @default(autoincrement())
+  full_name String
+  role      String     // ADMIN, WAREHOUSE_MANAGER, DRIVER
+  workTasks WorkTask[] // Thêm back-relation cho assigned_to
+  taskGroups TaskGroup[]
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  name        String
+  description String?
+  products    Product[]
+}
+
+model Product {
+  id                    Int             @id @default(autoincrement())
+  category_id           Int?
+  category              Category?       @relation(fields: [category_id], references: [id])
+  sku_code              String          @unique
+  name                  String
+  base_uom              String
+  ai_total_weight_score Int
+  productUoms           ProductUom[]
+  locations             Location[]
+  lpnItems              LpnItem[]
+  outboundLines         OutboundLine[]
+  inboundLines          InboundReceiptLine[]
+}
+
+model ProductUom {
+  id                Int             @id @default(autoincrement())
+  product_id        Int
+  product           Product         @relation(fields: [product_id], references: [id])
+  uom_level         String
+  conversion_factor Int
+  weight_kg         Float
+  volume_cbm        Float
+  lpnItems          LpnItem[]
+  outboundLines     OutboundLine[]
+}
+
+model Location {
+  id                Int        @id @default(autoincrement())
+  location_code     String     @unique
+  zone              String
+  coord_x           Int
+  coord_y           Int
+  level_z           Int
+  max_weight_kg     Float
+  current_weight_kg Float      @default(0)
+  location_type     String     @default("RACK") // RACK, FLOOR, BIN, STAGING
+  length_cm         Int?
+  width_cm          Int?
+  height_cm         Int?
+  max_volume_cbm    Float?
+  picking_sequence  Int?
+  is_full           Boolean    @default(false)
+  status            String     @default("ACTIVE") // ACTIVE, INACTIVE, ARCHIVED
+  lpn_code          String?
+  product_id        Int?       // Mở rộng để lưu trực tiếp Product đang cất
+  product           Product?   @relation(fields: [product_id], references: [id])
+  lpns              Lpn[]
+  tasksFrom         WorkTask[] @relation("SourceLocation")
+  tasksTo           WorkTask[] @relation("DestLocation")
+}
+
+model InboundReceipt {
+  id           Int      @id @default(autoincrement())
+  receipt_code String   @unique
+  supplier_name String?
+  status       String   // NEW, PROCESSING, COMPLETED
+  created_at   DateTime @default(now())
+  lpns         Lpn[]
+  lines        InboundReceiptLine[]
+}
+
+model Lpn {
+  id                 Int             @id @default(autoincrement())
+  lpn_code           String          @unique
+  inbound_receipt_id Int
+  inbound_receipt    InboundReceipt  @relation(fields: [inbound_receipt_id], references: [id])
+  location_id        Int?
+  location           Location?       @relation(fields: [location_id], references: [id])
+  status             String          // RECEIVING, STORED, OUTBOUND
+  items              LpnItem[]
+  workTasks          WorkTask[]
+}
+
+model LpnItem {
+  id         Int         @id @default(autoincrement())
+  lpn_id     Int
+  lpn        Lpn         @relation(fields: [lpn_id], references: [id])
+  product_id Int
+  product    Product     @relation(fields: [product_id], references: [id])
+  uom_id     Int?
+  uom        ProductUom? @relation(fields: [uom_id], references: [id])
+  qty        Int
+}
+
+model OutboundOrder {
+  id         Int            @id @default(autoincrement())
+  order_code String         @unique
+  status     String         // PENDING, PICKING, DISPATCHED
+  created_at DateTime       @default(now())
+  lines      OutboundLine[]
+}
+
+model OutboundLine {
+  id            Int           @id @default(autoincrement())
+  order_id      Int
+  order         OutboundOrder @relation(fields: [order_id], references: [id])
+  product_id    Int
+  product       Product       @relation(fields: [product_id], references: [id])
+  uom_id        Int?
+  uom           ProductUom?   @relation(fields: [uom_id], references: [id])
+  requested_qty Int
+}
+
+model WorkTask {
+  id                 Int       @id @default(autoincrement())
+  task_type          String    // PUTAWAY, PICKING
+  lpn_id             Int
+  lpn                Lpn       @relation(fields: [lpn_id], references: [id])
+  source_location_id Int?
+  source_location    Location? @relation("SourceLocation", fields: [source_location_id], references: [id])
+  dest_location_id   Int
+  dest_location      Location  @relation("DestLocation", fields: [dest_location_id], references: [id])
+  assigned_to        Int?
+  user               User?     @relation(fields: [assigned_to], references: [id])
+  ai_reason          String?
+  status             String    // TODO, IN_PROGRESS, COMPLETED
+  task_group_id      Int?
+  task_group         TaskGroup? @relation(fields: [task_group_id], references: [id])
+}
+
+model InboundReceiptLine {
+  id                 Int            @id @default(autoincrement())
+  inbound_receipt_id Int
+  inbound_receipt    InboundReceipt @relation(fields: [inbound_receipt_id], references: [id], onDelete: Cascade)
+  product_id         Int
+  product            Product        @relation(fields: [product_id], references: [id])
+  expected_qty       Int
+  actual_qty         Int            @default(0)
+}
+
+model TaskGroup {
+  id           Int        @id @default(autoincrement())
+  group_code   String     @unique 
+  task_type    String     
+  status       String     // TODO, IN_PROGRESS, COMPLETED
+  created_at   DateTime   @default(now())
+  assigned_to  Int?
+  user         User?      @relation(fields: [assigned_to], references: [id])
+  tasks        WorkTask[] 
+}
+
+model Equipment {
+  id                Int      @id @default(autoincrement())
+  equipment_code    String   @unique
+  equipment_type    String   
+  name              String
+  max_weight_kg     Int      
+  length_m          Float    @default(2.0)
+  width_m           Float    @default(1.0)
+  min_aisle_width_m Float    @default(2.0)
+  max_pallets       Int      @default(1)
+  quantity          Int      @default(1)
+  status            String   @default("ACTIVE")
+}

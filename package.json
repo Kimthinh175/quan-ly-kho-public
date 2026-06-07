@@ -1,0 +1,21 @@
+{
+  "name": "quan-ly-kho",
+  "version": "1.0.0",
+  "description": "Base for WMS system with BE and FE",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "react-hot-toast": "^2.6.0",
+    "uuid": "^14.0.0"
+  }
+}

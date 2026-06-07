@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: wms_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=file:./dev.db
+    volumes:
+      - sqlite_data:/app/prisma
+
+  frontend:
+    build: ./frontend
+    container_name: wms_frontend
+    restart: always
+    ports:
+      - "5010:80"
+    depends_on:
+      - backend
+
+volumes:
+  sqlite_data:

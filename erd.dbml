@@ -1,0 +1,132 @@
+// ==========================================
+// AURAFLOW WMS - CORE MVP (INBOUND, PALLET, LOCATION, OUTBOUND)
+// ==========================================
+
+Table users {
+  id int [pk, increment]
+  full_name varchar
+  role varchar [note: 'ADMIN, WAREHOUSE_MANAGER, DRIVER']
+}
+
+// ==========================================
+// 1. MASTER DATA (SẢN PHẨM & LOẠI HÀNG & UOM)
+// ==========================================
+
+Table categories {
+  id int [pk, increment]
+  code varchar [unique, note: 'Mã loại hàng, VD: FOOD, DRINK']
+  name varchar [note: 'Tên loại hàng']
+  description varchar
+}
+
+Table products {
+  id int [pk, increment]
+  category_id int [ref: > categories.id, note: 'Thuộc loại hàng nào']
+  sku_code varchar [unique]
+  name varchar
+  base_uom varchar [note: 'Đơn vị nhỏ nhất (Cái, Chiếc, Hộp) - Item lẻ']
+  ai_total_weight_score int [note: 'Tổng điểm ABC-XYZ tính sẵn để AI đọc cho lẹ']
+  attributes object [note: Cột này định nghĩa "Căn cước công dân" của cái sản phẩm đó.   {"brand": "Coolmate", "category": "CLOTHING"}]
+}
+
+Table product_uom {
+  id int [pk, increment]
+  product_id int [ref: > products.id]
+  uom_level varchar [note: 'CARTON (Thùng), PALLET (Kiện)']
+  conversion_factor int [note: 'VD: 1 Thùng = 50 Cái']
+  weight_kg decimal [note: 'Trọng lượng của 1 đơn vị UOM này']
+  volume_cbm decimal [note: 'Thể tích của 1 đơn vị UOM này']
+}
+
+// ==========================================
+// 2. KỆ & VỊ TRÍ (LOCATIONS) - CHUẨN BỊ CHO TOÁN HỌC
+// ==========================================
+Table location_structures {
+  id int [pk, increment]
+  parent_id int [null, ref: > location_structures.id, note: 'Đệ quy chính nó. Nếu NULL = Cấp tổ chức cao nhất (Ví dụ: Nhà kho lớn 1 hoặc Tòa nhà A)']
+  name varchar [note: 'Tên phân cấp, VD: Phòng lạnh, Tầng 2, Khu A, Dãy kệ 01']
+  level_type varchar [note: 'Gợi ý nhãn: BUILDING, FLOOR, ZONE, AISLE, RACK']
+  allocation_rules [Cột này định nghĩa "Luật nhập cảnh" của cái Tầng/Khu đó. Ví dụ ở Tầng 1 (Dành cho hãng đồ nam Aurashop nhập các local brand): {"brand": ["Coolmate", "Owen"], "max_temp": null} Ví dụ ở Tầng 2 (Dành cho hàng đông lạnh): {"category": ["FOOD"], "max_temp": -18}]
+}
+
+Table locations {
+  id int [pk, increment]
+  structure_id int [ref: > location_structures.id, note: 'Thuộc nhánh nào trong cây đệ quy trên (Thường trỏ vào Dãy kệ hoặc Kệ cụ thể)']
+  location_code varchar [unique, note: 'VD: A-01-01']
+  zone varchar [note: 'Khu A, Khu B, DOCK_IN (Cửa nhập), DOCK_OUT (Cửa xuất)']
+  
+  // Tọa độ để tính thuật toán Vết dầu loang (Manhattan)
+  coord_x int [note: 'Tọa độ X (Dọc theo chiều dài kho)']
+  coord_y int [note: 'Tọa độ Y (Dọc theo chiều rộng kho)']
+  level_z int [note: 'Tầng kệ (Tầng 1, 2, 3...)']
+  
+  // Ràng buộc Vật lý (Hard-Constraints)
+  max_weight_kg decimal 
+  current_weight_kg decimal [default: 0]
+  is_full boolean [default: false, note: 'Đánh dấu nhanh để SQL lọc cho lẹ']
+}
+
+// ==========================================
+// 3. NHẬP KHO & PALLET (INBOUND & LPN)
+// ==========================================
+
+Table inbound_receipts {
+  id int [pk, increment]
+  receipt_code varchar [unique, note: 'Mã phiếu nhập']
+  supplier_name varchar
+  status varchar [note: 'NEW, PROCESSING, COMPLETED']
+  created_at timestamp
+}
+
+// Bảng LPN - Trái tim của Hệ thống (Quản lý Pallet/Tote)
+Table lpns {
+  id int [pk, increment]
+  lpn_code varchar [unique, note: 'Mã vạch dán trên Pallet gỗ hoặc Khay nhựa (Tote)']
+  inbound_receipt_id int [ref: > inbound_receipts.id]
+  location_id int [ref: > locations.id, note: 'Pallet này đang đứng ở tọa độ nào?']
+  status varchar [note: 'RECEIVING (Đang ở cửa), STORED (Đã lên kệ), OUTBOUND (Chờ xuất)']
+}
+
+// Nội dung bên trong LPN (Giải quyết bài toán Thùng vs Item lẻ)
+Table lpn_items {
+  id int [pk, increment]
+  lpn_id int [ref: > lpns.id]
+  product_id int [ref: > products.id]
+  uom_id int [null, ref: > product_uom.id, note: 'Nếu NULL => Chứa item lẻ (Cái). Nếu có ID => Chứa Thùng/Pallet']
+  qty int [note: 'Số lượng theo UOM tương ứng']
+}
+
+// ==========================================
+// 4. XUẤT KHO (OUTBOUND)
+// ==========================================
+
+Table outbound_orders {
+  id int [pk, increment]
+  order_code varchar [unique]
+  status varchar [note: 'PENDING, PICKING, DISPATCHED']
+  created_at timestamp
+}
+
+Table outbound_lines {
+  id int [pk, increment]
+  order_id int [ref: > outbound_orders.id]
+  product_id int [ref: > products.id]
+  uom_id int [null, ref: > product_uom.id, note: 'Khách mua sỉ (Thùng) hay lẻ (Cái)']
+  requested_qty int
+}
+
+// ==========================================
+// 5. LÕI ĐIỀU PHỐI (WORK TASKS)
+// ==========================================
+// Đây là bảng nối giữa AI/Toán học và Người chạy dưới kho
+
+Table work_tasks {
+  id int [pk, increment]
+  task_type varchar [note: 'PUTAWAY (Cất hàng), PICKING (Nhặt hàng)']
+  lpn_id int [ref: > lpns.id, note: 'Di chuyển LPN nào?']
+  source_location_id int [ref: > locations.id, note: 'Từ đâu?']
+  dest_location_id int [ref: > locations.id, note: 'Đến đâu? (Do AI/Toán học điền vào)']
+  assigned_to int [null, ref: > users.id, note: 'Giao cho tài xế nào?']
+  ai_reason text [note: 'Câu giải thích của AI in ra màn hình cho tài xế xem']
+  status varchar [note: 'TODO, IN_PROGRESS, COMPLETED']
+}

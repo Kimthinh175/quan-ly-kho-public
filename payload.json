@@ -1,0 +1,5 @@
+{
+  "model": "hf.co/aetman/Qwen2.5-3B-WMS-Master-V3-GGUF:latest",
+  "prompt": "Sắp xếp 50 pallet nước giải khát nhập kho. Đề xuất vị trí lưu trữ.",
+  "stream": false
+}
